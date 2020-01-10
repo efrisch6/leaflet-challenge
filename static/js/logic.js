@@ -1,6 +1,6 @@
 var url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
 
-function createMap(earthquakes,legend) {
+function createMap(earthquakes,plates) {
     var satellite = L.tileLayer(MAPBOX_URL, {
         attribution: ATTRIBUTION,
         maxZoom: 18,
@@ -29,15 +29,18 @@ function createMap(earthquakes,legend) {
     };
 
     var overlayMaps = {
+        "Fault Lines": plates, 
         "Earthquakes": earthquakes
     };
 
     var myMap = L.map("map", {
-        center: [34.052, -118.244],
-        zoom: 2.5,
-        layers: [satellite, earthquakes]
+        center: [37.090, -95.713],
+        zoom: 5,
+        layers: [satellite, earthquakes, plates]
     });
     earthquakes.addTo(myMap);
+
+    var legend = createLegend();
 
     legend.addTo(myMap);
 
@@ -64,50 +67,8 @@ function circleColor(magnitude) {
     };
 };
 
-function createFeatures(earthquakeData) {
-
-    // var earthquakes = L.choropleth(earthquakeData, {
-    //     filter: function(feature) {
-    //         if (feature.properties.mag > 0) {
-    //             return true;
-    //         }
-    //     },
-    //     valueProperty: "mag",
-    //     scale: ["#00ff00", "#ff0000"],
-    //     steps: 6,
-    //     mode: "q",
-    //     style: {
-    //         color: "#fff",
-    //         weight: 1,
-    //         fillOpacity: 0.8
-    //     },
-
-    //     onEachFeature: function (feature, layer) {
-    //         layer.bindPopup(`<strong>${feature.properties.place}</strong><hr>Magnatude: ${feature.properties.mag}<br>${new Date(feature.properties.time)}`);
-    //     }
-    // });
-
-    // var minMag = 0;
-    // var maxMag = 0;
-    // earthquakeData.features.forEach(d=>{ 
-    //     if (d.properties.mag > maxMag) {
-    //         maxMag = d.properties.mag;
-    //     } else if (d.properties.mag < minMag) {
-    //         minMag = d.properties.mag;
-    //         console.log(d);
-    //     }
-    // })
-    // console.log(`Min: ${minMag} - Max: ${maxMag}`);
-    // console.log(earthquakes.options.limits);
-
+function createFeatures(earthquakeData,plateData) {
     
-
-
-    
-    function onEachFeature(feature,layer) {
-        layer.bindPopup(`<strong>${feature.properties.place}</strong><hr>Magnatude: ${feature.properties.mag}<br>${new Date(feature.properties.time)}`);
-    }
-
     var earthquakes = L.geoJSON(earthquakeData,{
         pointToLayer: function(feature, latlng) {
             return L.circleMarker(latlng, {
@@ -119,35 +80,29 @@ function createFeatures(earthquakeData) {
                 fillOpacity: 1
             });
         },
-        onEachFeature: onEachFeature
+        onEachFeature: function(feature,layer) {
+            layer.bindPopup(`<strong>${feature.properties.place}</strong><hr>Magnatude: ${feature.properties.mag}<br>${new Date(feature.properties.time)}`);
+        }
     })
 
+    var plates = L.geoJSON(plateData, {
+        style: {
+            color: "#FFE400",
+        fillOpacity: 0},
+        onEachFeature: function(feature,layer) {
+            layer.bindPopup(`Plate: ${feature.properties.PlateName}`)
+        }
+    });
+
+    createMap(earthquakes,plates);
+};
+
+function createLegend() {
     var legend = L.control({ position: "bottomright" });
     legend.onAdd = function() {
         var div = L.DomUtil.create("div", "info legend");
-        // var limits = ["0-1","1-2","2-3","3-4","4-5","5+"]
         var limits = [0,1,2,3,4,5];
-        // var colors = earthquakes.options.colors;
         var labels = [];
-
-        // Add min & max
-        // var legendInfo = 
-        // "<div class=\"labels\">" +
-        //     "<div class=\"min\">" + "0" + "</div>" +
-        //     "<div class=\"max\">" + "5+" + "</div>" +
-        // "</div>";
-
-        // div.innerHTML = legendInfo;
-        console.log(limits);
-
-        // limits.forEach(function(limits, index) {
-        //     console.log(index);
-        // labels.push("<li style=\"background-color: white" + "\">" +
-        // "<i style=\"background-color: " + circleColor(limits[index]) + "\"></i>" + 
-        // limits[index] + (limits[index + 1] ? '&ndash;' + limits[index + 1] + "</li>" : "+" + "</li>"))
-        // });
-
-        // div.innerHTML += "<ul>" + labels.join("") + "</ul>";
 
         for (var i = 0; i < limits.length; i++) {
             div.innerHTML +=
@@ -158,11 +113,11 @@ function createFeatures(earthquakeData) {
         return div;
     };
 
-    createMap(earthquakes,legend);
-};
-
+    return legend;
+}
 
 d3.json(url, function (earthquakeData) {
-    console.log(earthquakeData);
-    createFeatures(earthquakeData);
+    d3.json("static/js/PB2002_boundaries.json", function(plateData) {
+        createFeatures(earthquakeData,plateData);
+    })
 });
