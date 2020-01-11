@@ -88,10 +88,7 @@ function createFeatures(earthquakeData,plateData) {
     var plates = L.geoJSON(plateData, {
         style: {
             color: "#FFE400",
-        fillOpacity: 0},
-        onEachFeature: function(feature,layer) {
-            layer.bindPopup(`Plate: ${feature.properties.PlateName}`)
-        }
+        fillOpacity: 0}
     });
 
     createMap(earthquakes,plates);
